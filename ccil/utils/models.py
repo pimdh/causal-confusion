@@ -29,7 +29,7 @@ class SimplePolicy(nn.Module):
         return self.net(state)
 
 
-class UniformMaskPolicy(nn.Module):
+class MaskPolicy(nn.Module):
     def __init__(self, net):
         super().__init__()
         self.net = net

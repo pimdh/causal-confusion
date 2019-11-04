@@ -39,9 +39,13 @@ python -m ccil.imitate original simple
 python -m ccil.imitate confounded simple
 ```
 
-To train graph-parametrized policy on confounded state:
+To train graph-parametrized policy on confounded state with uniform graph sampling:
 ```
 python -m ccil.imitate confounded uniform --save
+```
+To train graph-parametrized policy on confounded state with variational causal discovery (2^N categorical distribution):
+```
+python -m ccil.imitate confounded combinatorial --save
 ```
 
 To perform intervention by policy execution:

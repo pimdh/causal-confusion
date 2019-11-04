@@ -12,18 +12,20 @@ from torch.utils.data import DataLoader
 
 from ccil.environments.mountain_car import MountainCarStateEncoder
 from ccil.utils.data import random_split, batch_cat, DataLoaderRepeater, Trajectory
-from ccil.utils.models import SimplePolicy, MLP, UniformMaskPolicy
+from ccil.utils.graph_distribution import UniformDistribution, CombinatorialGumbelDistribution, sparse_prior_logits
+from ccil.utils.models import SimplePolicy, MLP, MaskPolicy
 from ccil.utils.policy_runner import PolicyRunner, RandomMaskPolicyAgent, FixedMaskPolicyAgent
 from ccil.utils.utils import random_mask_from_state, data_root_path, mask_idx_to_mask
 
 
-def train_step(engine, batch, state_encoder, policy_model, optimizer, criterion, device):
+def train_step(engine, batch, state_encoder, policy_model, optimizer, criterion, device, graph_distribution):
     x, y = state_encoder.batch(batch), batch.labels()
     x, y = x.to(device), y.to(device)
 
-    mask = random_mask_from_state(x)
+    mask, sample_data = graph_distribution.rsample(len(x), x.device)
     output = policy_model.forward(x, mask)
     loss = criterion(output, y)
+    loss = graph_distribution.regularize_loss(loss, x, mask, output, sample_data)
 
     optimizer.zero_grad()
     loss.backward()
@@ -31,10 +33,10 @@ def train_step(engine, batch, state_encoder, policy_model, optimizer, criterion,
     return loss
 
 
-def inference_step(engine, batch, state_encoder, policy_model, device):
+def inference_step(engine, batch, state_encoder, policy_model, device, graph_distribution):
     x, y = state_encoder.batch(batch), batch.labels()
     x, y = x.to(device), y.to(device)
-    mask = random_mask_from_state(x)
+    mask, _ = graph_distribution.rsample(len(x), x.device)
     output = policy_model.forward(x, mask)
     return output, y
 
@@ -57,7 +59,7 @@ def run_simple(policy_model, state_encoder):
     print(f'Mean reward: {Trajectory.reward_sum_mean(trajectories)}')
 
 
-def run_uniform(policy_model, state_encoder):
+def run_graphs(policy_model, state_encoder):
     """
     Run all 8 policies in environment.
     """
@@ -85,14 +87,21 @@ def imitate(args):
 
     if args.network == 'simple':
         policy_model = SimplePolicy(MLP([3, 50, 50, 3])).to(device)
+        graph_distribution = UniformDistribution(3)
         max_epochs = 10
     elif args.network == 'uniform':
-        policy_model = UniformMaskPolicy(MLP([6, 50, 50, 50, 3])).to(device)
+        policy_model = MaskPolicy(MLP([6, 50, 50, 50, 3])).to(device)
+        graph_distribution = UniformDistribution(3)
+        max_epochs = 20
+    elif args.network == 'combinatorial':
+        prior_logits = sparse_prior_logits(3, 0.6)
+        graph_distribution = CombinatorialGumbelDistribution(0.5, 3, beta=0.05, prior_logits=prior_logits).to(device)
+        policy_model = MaskPolicy(MLP([6, 50, 50, 50, 3])).to(device)
         max_epochs = 20
     else:
         raise ValueError()
 
-    optimizer = torch.optim.Adam(policy_model.parameters())
+    optimizer = torch.optim.Adam(list(policy_model.parameters()) + list(graph_distribution.parameters()))
 
     def criterion(x, y):
         return F.cross_entropy(x, y[:, 0])
@@ -106,11 +115,16 @@ def imitate(args):
 
     trainer = Engine(partial(
         train_step, state_encoder=state_encoder, policy_model=policy_model,
-        optimizer=optimizer, criterion=criterion, device=device
+        optimizer=optimizer, criterion=criterion, device=device,
+        graph_distribution=graph_distribution,
     ))
     evaluators = {
         name: Engine(partial(
-            inference_step, state_encoder=state_encoder, policy_model=policy_model, device=device))
+            inference_step,
+            state_encoder=state_encoder,
+            policy_model=policy_model,
+            device=device,
+            graph_distribution=graph_distribution))
         for name in ['train', 'test']}
     for evaluator_name, evaluator in evaluators.items():
         for name, metric in metrics.items():
@@ -121,12 +135,14 @@ def imitate(args):
     def run_eval(_trainer):
         for name, evaluator in evaluators.items():
             evaluator.run(dataloaders[name])
+        if not isinstance(graph_distribution, UniformDistribution):
+            print(graph_distribution)
 
     trainer.run(dataloaders['train_repeated'], max_epochs=max_epochs)
     print("Trained")
 
     # Run policies in environment
-    run_fn = dict(simple=run_simple, uniform=run_uniform)[args.network]
+    run_fn = run_simple if args.network == 'simple' else run_graphs
     run_fn(policy_model, state_encoder)
 
     if args.save:
@@ -134,14 +150,17 @@ def imitate(args):
         save_dir = data_root_path / 'policies'
         save_dir.mkdir(parents=True, exist_ok=True)
         path = save_dir / f"{name}.pkl"
+        probs_path = save_dir / f"{name}-probs.pkl"
         torch.save(policy_model, path)
-        print(f"Policy saved to {path}")
+        torch.save(graph_distribution.probs.cpu().detach(), probs_path)
+        print(f"Saved to dir: {save_dir}")
+        print(f"Under name:   {name}")
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('input_mode', choices=['original', 'confounded'])
-    parser.add_argument('network', choices=['simple', 'uniform'])
+    parser.add_argument('network', choices=['simple', 'uniform', 'combinatorial'])
     parser.add_argument('--data_seed', type=int, help="Seed for splitting train/test data. Default=random")
     parser.add_argument('--num_samples', type=int, default=300)
     parser.add_argument('--save', action='store_true')
