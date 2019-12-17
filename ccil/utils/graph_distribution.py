@@ -1,24 +1,55 @@
-import numpy as np
+"""
+Model distributions over causal graphs as distributions over binary masks.
+"""
+from typing import Tuple, Any
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical, RelaxedOneHotCategorical
 
-from ccil.utils.utils import mask_to_mask_idx_tensor, onehot_to_mask_idx_tensor, print_array, all_masks_tensor
+from ccil.utils.utils import onehot_to_mask_idx_tensor, print_array, all_masks_tensor
 
 
 class GraphDistribution(nn.Module):
+    """
+    Abstract distribution over graphs.
+    """
     def regularize_loss(self, loss, x, mask, output, sample_data):
+        """
+        Add to loss terms regarding mask learning.
+        :param loss: behaviour cloning loss
+        :param x: encoded state
+        :param mask: mask tensor
+        :param output: output of PolicyModel
+        :param sample_data: 2nd output of rsample
+        :return: new loss
+        """
         raise NotImplementedError
 
-    def rsample(self, n, device=None):
+    def rsample(self, n, device=None) -> Tuple[torch.Tensor, Any]:
+        """
+        Sample n graphs with reparametrization.
+        :param n:
+        :param device:
+        :return:
+        """
         raise NotImplementedError
 
     @property
     def probs(self):
+        """
+        Return probabilities of categories.
+        :return:
+        """
         raise NotImplementedError
 
     def forward(self, input):
+        """
+        Dummy method, unused.
+        :param input:
+        :return:
+        """
         pass
 
 

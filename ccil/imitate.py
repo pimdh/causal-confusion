@@ -1,3 +1,6 @@
+"""
+Main behaviour cloning training loop.
+"""
 from datetime import datetime
 import argparse
 from functools import partial
@@ -11,14 +14,30 @@ from ignite.metrics import Accuracy, Loss
 from torch.utils.data import DataLoader
 
 from ccil.environments.mountain_car import MountainCarStateEncoder
-from ccil.utils.data import random_split, batch_cat, DataLoaderRepeater, Trajectory
-from ccil.utils.graph_distribution import UniformDistribution, CombinatorialGumbelDistribution, sparse_prior_logits
-from ccil.utils.models import SimplePolicy, MLP, MaskPolicy
+from ccil.utils.state_encoder import StateEncoder
+from ccil.utils.data import random_split, batch_cat, DataLoaderRepeater, Trajectory, Batch
+from ccil.utils.graph_distribution import UniformDistribution, CombinatorialGumbelDistribution, sparse_prior_logits, \
+    GraphDistribution
+from ccil.utils.models import SimplePolicy, MLP, MaskPolicy, PolicyModel
 from ccil.utils.policy_runner import PolicyRunner, RandomMaskPolicyAgent, FixedMaskPolicyAgent
-from ccil.utils.utils import random_mask_from_state, data_root_path, mask_idx_to_mask
+from ccil.utils.utils import data_root_path, mask_idx_to_mask
 
 
-def train_step(engine, batch, state_encoder, policy_model, optimizer, criterion, device, graph_distribution):
+def train_step(
+        engine: Engine, batch: Batch, state_encoder: StateEncoder, policy_model: PolicyModel, optimizer, criterion,
+        device, graph_distribution: GraphDistribution):
+    """
+    PyTorch ignite training step.
+    :param engine:
+    :param batch:
+    :param state_encoder:
+    :param policy_model:
+    :param optimizer:
+    :param criterion:
+    :param device:
+    :param graph_distribution:
+    :return:
+    """
     x, y = state_encoder.batch(batch), batch.labels()
     x, y = x.to(device), y.to(device)
 
@@ -33,7 +52,19 @@ def train_step(engine, batch, state_encoder, policy_model, optimizer, criterion,
     return loss
 
 
-def inference_step(engine, batch, state_encoder, policy_model, device, graph_distribution):
+def inference_step(
+        engine: Engine, batch: Batch, state_encoder: StateEncoder, policy_model: PolicyModel, device,
+        graph_distribution: GraphDistribution):
+    """
+    PyTorch ignite inference step.
+    :param engine:
+    :param batch:
+    :param state_encoder:
+    :param policy_model:
+    :param device:
+    :param graph_distribution:
+    :return:
+    """
     x, y = state_encoder.batch(batch), batch.labels()
     x, y = x.to(device), y.to(device)
     mask, _ = graph_distribution.rsample(len(x), x.device)
@@ -73,6 +104,12 @@ def run_graphs(policy_model, state_encoder):
 
 
 def imitate(args):
+    """
+    Learn imitator.
+    Uses PyTorch Ignite.
+
+    :param args: See Parser below.
+    """
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     dataset = torch.load(data_root_path / 'demonstrations' / 'mountain_car.pkl')
@@ -159,11 +196,17 @@ def imitate(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_mode', choices=['original', 'confounded'])
-    parser.add_argument('network', choices=['simple', 'uniform', 'combinatorial'])
+    parser.add_argument(
+        'input_mode', choices=['original', 'confounded'],
+        help="Whether to add random action [original] or previous [confounded].")
+    parser.add_argument(
+        'network', choices=['simple', 'uniform', 'combinatorial'],
+        help=("What kind of graph distribution to use. Simple: mask nothing, Uniform: sample uniformly. "
+              "Combinatorial: learn categorical over all 2**N graphs.")
+    )
     parser.add_argument('--data_seed', type=int, help="Seed for splitting train/test data. Default=random")
-    parser.add_argument('--num_samples', type=int, default=300)
-    parser.add_argument('--save', action='store_true')
+    parser.add_argument('--num_samples', type=int, default=300, help="Num samples used for training.")
+    parser.add_argument('--save', action='store_true', help="Whether to save learned policy.")
     parser.add_argument('--name', help="Policy save filename")
     imitate(parser.parse_args())
 

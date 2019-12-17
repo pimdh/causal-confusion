@@ -20,7 +20,12 @@ class MLP(nn.Module):
         return self.blocks(x)
 
 
-class SimplePolicy(nn.Module):
+class PolicyModel(nn.Module):
+    def forward(self, state, mask):
+        raise NotImplementedError
+
+
+class SimplePolicy(PolicyModel):
     def __init__(self, net):
         super().__init__()
         self.net = net
@@ -29,7 +34,7 @@ class SimplePolicy(nn.Module):
         return self.net(state)
 
 
-class MaskPolicy(nn.Module):
+class MaskPolicy(PolicyModel):
     def __init__(self, net):
         super().__init__()
         self.net = net

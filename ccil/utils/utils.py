@@ -1,3 +1,8 @@
+"""
+Some helper functions.
+
+Mostly related to handling the binary arrays/tensors of the masks.
+"""
 from os import environ
 from pathlib import Path
 

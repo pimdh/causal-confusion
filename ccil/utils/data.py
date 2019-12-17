@@ -1,11 +1,18 @@
+"""
+Classes for handling the trajectory data.
+"""
 from itertools import accumulate
 from typing import List
 import numpy as np
 import torch as torch
+from torch.utils.data import Dataset
 
 
-class Subset:
-    def __init__(self, dataset, indices):
+class Subset(Dataset):
+    """
+    Subset of dataset as new dataset.
+    """
+    def __init__(self, dataset: Dataset, indices: torch.Tensor):
         self.dataset = dataset
         self.indices = indices
 
@@ -20,7 +27,14 @@ class Subset:
         return self
 
 
-def random_split(dataset, lengths, seed=None):
+def random_split(dataset: Dataset, lengths: List[int], seed=None) -> List[Dataset]:
+    """
+    Split dataset in smaller ones.
+    :param dataset:
+    :param lengths:
+    :param seed:
+    :return:
+    """
     s = sum([l for l in lengths if l > 0])
     lengths = [l if l > 0 else len(dataset) - s for l in lengths]
     assert sum(lengths) <= len(dataset), "Too many samples requested"
@@ -246,7 +260,7 @@ class Batch:
         return labels
 
 
-def batch_cat(batches: List[Batch]):
+def batch_cat(batches: List[Batch]) -> Batch:
     no_pixels = any([len(b.pixels.shape) == 2 for b in batches])
     tensors = []
     n = sum([b.states.shape[0] for b in batches])

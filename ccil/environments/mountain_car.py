@@ -4,6 +4,7 @@ from gym.envs.classic_control import MountainCarEnv
 from gym.envs.registration import register
 from gym import Wrapper
 
+from ccil.utils.state_encoder import StateEncoder
 from ccil.utils.utils import data_root_path
 
 
@@ -28,8 +29,10 @@ class MCRichDenseEnv(Wrapper):
 
 
 class MCRichEnv(Wrapper):
-    """Richer initial conditions."""
-
+    """
+    Richer initial conditions.
+    Used for demonstration dataset generations, as otherwise only demonstrations exists of small region of state space.
+    """
     def __init__(self):
         super().__init__(MountainCarEnv())
 
@@ -56,7 +59,7 @@ register(
 )
 
 
-class MountainCarStateEncoder:
+class MountainCarStateEncoder(StateEncoder):
     """
     Map batch from TransitionDataset or Trajectory into state vector.
     """
@@ -86,7 +89,7 @@ class MountainCarStateEncoder:
         return x
 
 
-class MountainExpertCarStateEncoder:
+class MountainExpertCarStateEncoder(StateEncoder):
     """
     Map batch from TransitionDataset or Trajectory into state vector.
     """
@@ -98,6 +101,9 @@ class MountainExpertCarStateEncoder:
 
 
 class MountainCarExpert:
+    """
+    MountainCar expert as function state np.ndarray -> int action. Allows for batched calls.
+    """
     def __init__(self):
         expert_path = data_root_path / "experts/mountaincar_deepq_custom.pickle"
         from baselines import deepq

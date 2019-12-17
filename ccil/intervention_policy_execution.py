@@ -1,3 +1,6 @@
+"""
+Infer optimal graph by intervention through policy execution.
+"""
 from pprint import pprint
 
 import gym

@@ -1,3 +1,6 @@
+"""
+Generate dataset of expert demonstrations.
+"""
 import argparse
 from pathlib import Path
 
