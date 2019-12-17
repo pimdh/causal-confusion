@@ -15,6 +15,7 @@ class GraphDistribution(nn.Module):
     """
     Abstract distribution over graphs.
     """
+
     def regularize_loss(self, loss, x, mask, output, sample_data):
         """
         Add to loss terms regarding mask learning.
@@ -81,16 +82,21 @@ def sparse_prior_logits(n, strength):
 
 
 class CombinatorialGumbelDistribution(GraphDistribution):
-    def __init__(self, temperature, num_vars, beta=1., prior_logits=None):
+    def __init__(self, temperature, num_vars, beta=1.0, prior_logits=None):
         super().__init__()
-        self.register_buffer('temperature', torch.tensor(temperature))
-        self.logits = nn.Parameter(torch.zeros(2**num_vars))
-        self.register_buffer('prior_logits', torch.zeros(2**num_vars) if prior_logits is None else prior_logits)
+        self.register_buffer("temperature", torch.tensor(temperature))
+        self.logits = nn.Parameter(torch.zeros(2 ** num_vars))
+        self.register_buffer(
+            "prior_logits",
+            torch.zeros(2 ** num_vars) if prior_logits is None else prior_logits,
+        )
         self.beta = beta
 
     @property
     def distr(self):
-        return RelaxedOneHotCategorical(temperature=self.temperature, logits=self.logits)
+        return RelaxedOneHotCategorical(
+            temperature=self.temperature, logits=self.logits
+        )
 
     @property
     def hard_distr(self):
@@ -105,7 +111,10 @@ class CombinatorialGumbelDistribution(GraphDistribution):
         return self.hard_distr.probs
 
     def regularize_loss(self, loss, x, mask, output, sample_data):
-        kl = categorical_cross_entropy(self.hard_distr, self.prior) - self.hard_distr.entropy()
+        kl = (
+            categorical_cross_entropy(self.hard_distr, self.prior)
+            - self.hard_distr.entropy()
+        )
         return loss + kl * self.beta
 
     def rsample(self, n, device=None):
@@ -116,5 +125,3 @@ class CombinatorialGumbelDistribution(GraphDistribution):
 
     def __str__(self):
         return f"<CombinatorialGumbelDistribution p={print_array(self.distr.probs.detach().cpu(), precision=3)}>"
-
-

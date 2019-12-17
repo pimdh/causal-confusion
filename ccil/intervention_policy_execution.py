@@ -19,7 +19,12 @@ from ccil.utils.utils import data_root_path
 
 
 def sample(weights, temperature):
-    return Bernoulli(logits=torch.from_numpy(weights) / temperature).sample().long().numpy()
+    return (
+        Bernoulli(logits=torch.from_numpy(weights) / temperature)
+        .sample()
+        .long()
+        .numpy()
+    )
 
 
 def linear_regression(masks, rewards, alpha=1.0):
@@ -29,13 +34,7 @@ def linear_regression(masks, rewards, alpha=1.0):
 
 class SoftQAlgo:
     def __init__(
-            self,
-            num_dims,
-            reward_fn,
-            its,
-            temperature=1.0,
-            device=None,
-            evals_per_it=1,
+        self, num_dims, reward_fn, its, temperature=1.0, device=None, evals_per_it=1,
     ):
         self.num_dims = num_dims
         self.reward_fn = reward_fn
@@ -77,11 +76,11 @@ class SoftQAlgo:
 
 
 def intervention_policy_execution(args):
-    policy_save_dir = data_root_path / 'policies'
+    policy_save_dir = data_root_path / "policies"
     if args.policy_name:
         policy_path = policy_save_dir / f"{args.policy_name}.pkl"
     else:
-        policy_paths = policy_save_dir.glob('confounded_uniform*.pkl')
+        policy_paths = policy_save_dir.glob("confounded_uniform*.pkl")
         if not policy_paths:
             raise RuntimeError("No policy found")
         policy_path = next(iter(sorted(policy_paths, reverse=True)))
@@ -97,7 +96,7 @@ def intervention_policy_execution(args):
 
     trace = SoftQAlgo(3, run_step, args.num_its, temperature=10).run()
 
-    best_mask = trace[-1]['mode']
+    best_mask = trace[-1]["mode"]
     trajectories = run_fixed_mask(env, policy_model, state_encoder, best_mask, 20)
     print(f"Final mask {best_mask.tolist()}")
     print(f"Final reward {Trajectory.reward_sum_mean(trajectories)}")
@@ -105,11 +104,11 @@ def intervention_policy_execution(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--policy_name', help="Policy save filename")
-    parser.add_argument('--num_its', type=int, default=20)
-    parser.add_argument('--temperature', type=float, default=10)
+    parser.add_argument("--policy_name", help="Policy save filename")
+    parser.add_argument("--num_its", type=int, default=20)
+    parser.add_argument("--temperature", type=float, default=10)
     intervention_policy_execution(parser.parse_args())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

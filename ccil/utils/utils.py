@@ -10,7 +10,7 @@ import numpy as np
 
 import torch
 
-data_root_path = Path(environ.get('DATA_PATH', './data'))
+data_root_path = Path(environ.get("DATA_PATH", "./data"))
 
 
 def random_mask_from_state(x):
@@ -19,14 +19,14 @@ def random_mask_from_state(x):
 
 def mask_idx_to_mask(n, i):
     i = np.asarray(i)
-    assert np.all(i < 2**n)
+    assert np.all(i < 2 ** n)
     r = 2 ** np.arange(n - 1, -1, -1)
     x = (i[..., None] % (2 * r)) // r
     return x
 
 
 def mask_idx_to_mask_tensor(n, i):
-    assert torch.all(i < 2**n)
+    assert torch.all(i < 2 ** n)
     r = 2 ** torch.arange(n - 1, -1, -1, device=i.device)
     x = (i[..., None] % (2 * r)) // r
     return x
@@ -47,7 +47,7 @@ def mask_to_mask_idx_tensor(mask):
 
 def all_masks_tensor(n, device=None):
     r = 2 ** torch.arange(n - 1, -1, -1, device=device)
-    masks = torch.arange(2**n, device=device)[:, None] % (2*r) // r
+    masks = torch.arange(2 ** n, device=device)[:, None] % (2 * r) // r
     return masks
 
 
@@ -55,7 +55,7 @@ def onehot_to_mask_idx_tensor(onehot):
     n = int(np.log2(onehot.shape[-1]))
     assert 2 ** n == onehot.shape[-1]
     masks = all_masks_tensor(n, onehot.device).to(onehot)
-    return torch.einsum('...i,ij->...j', onehot, masks)
+    return torch.einsum("...i,ij->...j", onehot, masks)
 
 
 def test_mask_idx_to_mask():
@@ -77,4 +77,3 @@ def print_array(arr, **opts):
     out = str(np.asarray(arr))
     np.set_printoptions(**original)
     return out
-

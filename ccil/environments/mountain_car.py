@@ -10,14 +10,17 @@ from ccil.utils.utils import data_root_path
 
 class MCRichDenseEnv(Wrapper):
     """Richer initial conditions + dense rewards for easy training of expert."""
+
     def __init__(self):
         super().__init__(MountainCarEnv())
 
     def reset(self):
-        self.env.state = np.array([
-            self.np_random.uniform(low=-1, high=0.5),
-            self.unwrapped.np_random.randn() * 0.07,
-        ])
+        self.env.state = np.array(
+            [
+                self.np_random.uniform(low=-1, high=0.5),
+                self.unwrapped.np_random.randn() * 0.07,
+            ]
+        )
         return np.array(self.env.state)
 
     def step(self, action):
@@ -33,14 +36,17 @@ class MCRichEnv(Wrapper):
     Richer initial conditions.
     Used for demonstration dataset generations, as otherwise only demonstrations exists of small region of state space.
     """
+
     def __init__(self):
         super().__init__(MountainCarEnv())
 
     def reset(self):
-        self.env.state = np.array([
-            self.np_random.uniform(low=-1, high=0.5),
-            self.unwrapped.np_random.randn() * 0.07,
-            ])
+        self.env.state = np.array(
+            [
+                self.np_random.uniform(low=-1, high=0.5),
+                self.unwrapped.np_random.randn() * 0.07,
+            ]
+        )
         return np.array(self.env.state)
 
 
@@ -63,6 +69,7 @@ class MountainCarStateEncoder(StateEncoder):
     """
     Map batch from TransitionDataset or Trajectory into state vector.
     """
+
     def __init__(self, random):
         """
         :param random: Whether to use random action.
@@ -74,7 +81,9 @@ class MountainCarStateEncoder(StateEncoder):
         x = batch.states[:, -1, :]
 
         if self.random:
-            prev_action = torch.randint(0, 3, (x.shape[0], 1), device=x.device, dtype=torch.float)
+            prev_action = torch.randint(
+                0, 3, (x.shape[0], 1), device=x.device, dtype=torch.float
+            )
         else:
             prev_action = batch.actions[:, -2]
 
@@ -93,6 +102,7 @@ class MountainExpertCarStateEncoder(StateEncoder):
     """
     Map batch from TransitionDataset or Trajectory into state vector.
     """
+
     def batch(self, batch):
         return batch.states[:, -1, :]
 
@@ -104,11 +114,12 @@ class MountainCarExpert:
     """
     MountainCar expert as function state np.ndarray -> int action. Allows for batched calls.
     """
+
     def __init__(self):
         expert_path = data_root_path / "experts/mountaincar_deepq_custom.pickle"
         from baselines import deepq
+
         self.expert = deepq.load_act(expert_path)
 
     def __call__(self, state):
         return self.expert(state)
-

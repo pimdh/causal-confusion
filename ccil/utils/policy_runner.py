@@ -19,7 +19,13 @@ class PolicyRunner:
     """
     Execute policy in environment.
     """
-    def __init__(self, env: Env, agent: Callable[[np.ndarray], np.ndarray], state_encoder: StateEncoder):
+
+    def __init__(
+        self,
+        env: Env,
+        agent: Callable[[np.ndarray], np.ndarray],
+        state_encoder: StateEncoder,
+    ):
         self.env = env
         self.agent = agent
         self.state_encoder = state_encoder
@@ -79,7 +85,13 @@ class PolicyRunner:
         return trajectories
 
 
-def run_fixed_mask(env: Env, policy_model: PolicyModel, state_encoder: StateEncoder, mask: np.ndarray, num_episodes) -> List[Trajectory]:
+def run_fixed_mask(
+    env: Env,
+    policy_model: PolicyModel,
+    state_encoder: StateEncoder,
+    mask: np.ndarray,
+    num_episodes,
+) -> List[Trajectory]:
     """
     Run policy model with fixed mask.
     :param env:
@@ -107,6 +119,7 @@ class RandomMaskPolicyAgent:
     """
     Turn PolicyModel into callable agent. Sample random policy at each step.
     """
+
     def __init__(self, policy: PolicyModel, output_transformation=hard_discrete_action):
         self.policy = policy
         self.device = next(policy.parameters()).device
@@ -124,7 +137,13 @@ class FixedMaskPolicyAgent:
     """
     Turn PolicyModel into callable agent. Use one fixed mask.
     """
-    def __init__(self, policy: PolicyModel, mask: np.ndarray, output_transformation=hard_discrete_action):
+
+    def __init__(
+        self,
+        policy: PolicyModel,
+        mask: np.ndarray,
+        output_transformation=hard_discrete_action,
+    ):
         self.policy = policy
         self.device = next(policy.parameters()).device
         self.mask = torch.tensor(mask, device=self.device, dtype=torch.float)

@@ -12,6 +12,7 @@ class Subset(Dataset):
     """
     Subset of dataset as new dataset.
     """
+
     def __init__(self, dataset: Dataset, indices: torch.Tensor):
         self.dataset = dataset
         self.indices = indices
@@ -57,6 +58,7 @@ class GrowingArray:
     """
     Array-like object that allows for efficient appending to end.
     """
+
     def __init__(self, data: np.ndarray, buffer_size=1000):
         self._size = len(data)
         self._buffer = data
@@ -97,6 +99,7 @@ class DataLoaderRepeater:
     """
     Create repeat data loader to make larger dataset out of smaller.
     """
+
     def __init__(self, loader, batches_per_epoch):
         self.i = 0
         self.batches_per_epoch = batches_per_epoch
@@ -130,6 +133,7 @@ class Trajectory:
     Data representing single episode, possibly not yet finished.
     Uses GrowingArray to efficiently append new steps.
     """
+
     keys = ["states", "actions", "rewards", "pixels"]
 
     def __init__(
@@ -163,7 +167,11 @@ class Trajectory:
     def action_repeat(self):
         if self.actions.dtype == np.float32:
             return float("NaN")
-        return (np.array(self.actions[1:]) == np.array(self.actions[:-1])).astype(np.float32).mean()
+        return (
+            (np.array(self.actions[1:]) == np.array(self.actions[:-1]))
+            .astype(np.float32)
+            .mean()
+        )
 
     def __len__(self):
         return len(self.states)
@@ -240,6 +248,7 @@ class Batch:
     """
     Batch of tensor data from TransitionDataset.
     """
+
     absent_sentinel = -111  # Can not use NaN for int actions
 
     def __init__(self, states, actions, rewards, pixels, expert_actions, indices):
@@ -284,6 +293,7 @@ class TransitionDataset:
 
     All objects are tensors.
     """
+
     def __init__(
         self, states, actions, rewards, pixels, expert_actions, done, stack_size
     ):
@@ -411,4 +421,3 @@ class TransitionDataset:
                 ret = 0
             ret = returns[i] = discount * ret + self.rewards[i]
         return returns
-

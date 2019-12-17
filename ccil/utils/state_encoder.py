@@ -8,6 +8,7 @@ class StateEncoder:
     """
     Encode
     """
+
     def batch(self, batch: Batch) -> torch.Tensor:
         """
         Encode batch of transitions.

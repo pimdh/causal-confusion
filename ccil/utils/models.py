@@ -4,6 +4,7 @@ import torch.nn as nn
 
 class MLP(nn.Module):
     """Helper module to create MLPs."""
+
     def __init__(self, dims, activation=nn.ReLU):
         super().__init__()
         blocks = nn.ModuleList()
@@ -11,7 +12,7 @@ class MLP(nn.Module):
         for i, (dim_in, dim_out) in enumerate(zip(dims, dims[1:])):
             blocks.append(nn.Linear(dim_in, dim_out))
 
-            if i < len(dims)-2:
+            if i < len(dims) - 2:
                 blocks.append(activation())
 
         self.blocks = nn.Sequential(*blocks)
